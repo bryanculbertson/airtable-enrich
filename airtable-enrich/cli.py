@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Entry point for running all data enrinchment commands.
+Entry point for running all data enrichment commands.
 """
 import logging
 import click
@@ -35,7 +35,7 @@ pass_info = click.make_pass_decorator(Info, ensure=True)
 @click.option("--verbose", "-v", count=True, help="Enable verbose output.")
 @pass_info
 def cli(info: Info, verbose: int):
-    """Run airtable-enrinch"""
+    """Run airtable-enrich"""
     # Use the verbosity count to determine the logging level...
     if verbose > 0:
         logging.basicConfig(
@@ -57,7 +57,7 @@ def cli(info: Info, verbose: int):
 @pass_info
 def hello(_: Info):
     """Say 'hello' to the nice people."""
-    click.echo("airtable-enrinch says 'hello'")
+    click.echo("airtable-enrich says 'hello'")
 
 
 @cli.command()

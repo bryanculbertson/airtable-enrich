@@ -19,7 +19,7 @@ Helpers for adding data to airtable bases
 1. Add census columns to table:
 
 ```python
-poetry run airtable-enrinch add-census \
+poetry run airtable-enrich add-census \
   --base=<base-key> \
   --table=<table-name> \
   --lat=<column-lat> \
