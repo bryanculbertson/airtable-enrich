@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "airtable-enrich"
+version = "0.1.0"
+description = "Helpers for adding data to airtable bases"
+authors = ["Bryan Culbertson <bryan.culbertson@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+airtable-python-wrapper = "^0.15.2"
+
+flake8 = { version = "^3.9.0", optional = true }
+black = { version = "^20.8b1", optional = true }
+mypy = { version = "^0.812", optional = true }
+
+[tool.poetry.dev-dependencies]
+
+[tool.poetry.extras]
+lint = ["flake8", "black", "mypy"]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
