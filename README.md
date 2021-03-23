@@ -11,6 +11,7 @@ Helpers for adding data to airtable bases
 1. `pipx install poetry`
 1. `poetry env use 3.9.2`
 1. `poetry install`
+1. (optional) For development: `poetry install --extras lint`
 1. `export AIRTABLE_APIKEY=<your-airtable-apikey>`
 
 ### Run Commands
