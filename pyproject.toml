@@ -13,6 +13,7 @@ black = { version = "^20.8b1", optional = true }
 mypy = { version = "^0.812", optional = true }
 click = "^7.1.2"
 python-dotenv = "^0.15.0"
+requests = "^2.25.1"
 
 [tool.poetry.dev-dependencies]
 

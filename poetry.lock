@@ -220,7 +220,7 @@ lint = ["flake8", "black", "mypy"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "14c62b584ad29cb44f83ff3ec8c624bdb7748d3b469381293c02ad71c4b5570c"
+content-hash = "19aa4c4cbd6483aeadd255a802579f3e7d9d83ceeae5ea2aca145d7aa289ce45"
 
 [metadata.files]
 airtable-python-wrapper = [
