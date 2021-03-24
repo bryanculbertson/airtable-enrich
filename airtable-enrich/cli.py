@@ -129,7 +129,7 @@ def fill_census(
             if not tract:
                 click.echo(
                     f"Skipping row {row['id']} because "
-                    "geocoder didn't return a tract"
+                    f"geocoder didn't return a tract for ({lat}, {lng})"
                 )
                 continue
 
@@ -147,12 +147,18 @@ def fill_census(
         click.echo('No rows needed to be updated.')
         return
 
+    example_value = updates[0]['fields'][tract_field]
+
     if not force:
-        example_value = updates[0]['fields'][tract_field]
         click.confirm(
             f"Apply {len(updates)} updates "
             f"e.g. {tract_field}={example_value}?",
             abort=True
+        )
+    else:
+        click.echo(
+            f"Appling {len(updates)} updates "
+            f"e.g. {tract_field}={example_value}?"
         )
 
     # Apply the update in bulk
