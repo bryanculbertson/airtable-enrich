@@ -26,7 +26,7 @@ def tract_for_latlng(lat: float, lng: float) -> Optional[dict]:
         "benchmark": DEFAULT_BENCHMARK,
     }
 
-    with requests.get(CENSUS_GEOCODER_URL, params=params, timeout=10) as r:
+    with requests.get(CENSUS_GEOCODER_URL, params=params, timeout=20) as r:
         response = r.json()
 
         result = response.get("result")
@@ -127,6 +127,10 @@ def fill_census(
             tract = tract_for_latlng(float(lat), float(lng))
 
             if not tract:
+                click.echo(
+                    f"Skipping row {row['id']} because "
+                    "geocoder didn't return a tract"
+                )
                 continue
 
             # Strip the leading zero off the geoid because that
