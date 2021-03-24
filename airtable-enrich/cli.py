@@ -5,7 +5,6 @@ Entry point for running all data enrichment commands.
 """
 import logging
 import click
-from .__init__ import __version__
 
 LOGGING_LEVELS = {
     0: logging.NOTSET,
@@ -63,4 +62,4 @@ def hello(_: Info):
 @cli.command()
 def version():
     """Get the library version."""
-    click.echo(click.style(f"{__version__}", bold=True))
+    click.echo(click.style("0.1.0", bold=True))
