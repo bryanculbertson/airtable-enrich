@@ -4,11 +4,46 @@
 Entry point for running all data enrichment commands.
 """
 import os
+from typing import Optional
 
 import airtable
 import click
 import dotenv
+import requests
 
+
+CENSUS_GEOCODER_URL = "https://geocoding.geo.census.gov/geocoder/geographies/coordinates"
+DEFAULT_BENCHMARK = "Public_AR_Current"
+DEFAULT_VINTAGE = "Current_Current"
+
+
+def tract_for_latlng(lat: float, lng: float) -> Optional[dict]:
+    params = {
+        "x": lng,
+        "y": lat,
+        "format": "json",
+        "vintage": DEFAULT_VINTAGE,
+        "benchmark": DEFAULT_BENCHMARK,
+    }
+
+    with requests.get(CENSUS_GEOCODER_URL, params=params, timeout=10) as r:
+        response = r.json()
+
+        result = response.get("result")
+        if not result:
+            return None
+
+        geographies = result.get("geographies")
+
+        tracts = geographies.get("Census Tracts")
+        if not tracts:
+            return None
+
+        tract = tracts[0]
+        if tract.get("status"):
+            return None
+
+        return tract
 
 @click.group()
 def cli():
@@ -52,6 +87,7 @@ def fields(basekey: str, tablename: str, apikey: str):
 @click.option("--lat", "lat_field", type=str, required=True)
 @click.option("--lng", "lng_field", type=str, required=True)
 @click.option("--tract", "tract_field", type=str, required=True)
+@click.option("--limit", type=int)
 @click.option("--force", type=bool, default=False)
 def fill_census(
     basekey: str,
@@ -60,62 +96,27 @@ def fill_census(
     lat_field: str,
     lng_field: str,
     tract_field: str,
+    limit: Optional[int],
     force: bool,
 ):
     """Print the head of the table"""
     table = airtable.Airtable(basekey, tablename, apikey)
 
-    # Validate that rows exist and the specified fields are available
-    rows = table.get_all(maxRecords=1)
-    if not rows:
-        click.echo("No rows in table")
-        return
-
-    row = rows[0]
-
-    if lat_field not in row["fields"]:
-        raise Exception(
-            f"Table is missing requred lat field ({lat_field})"
-        )
-
-    if lng_field not in row["fields"]:
-        raise Exception(
-            f"Table is missing requred lng field ({lng_field})"
-        )
-
-    if tract_field not in row["fields"]:
-        raise Exception(
-            f"Table is missing requred tract field ({tract_field})"
-        )
-
-    # Download all the rows locally because we are going to modify them in bulk.
-    with click.progressbar(table.get_all(), label="Retrieving rows") as rows:
+    # Download all the rows locally because
+    # we are going to modify them in bulk.
+    with click.progressbar(
+        table.get_all(maxRecords=limit), label="Retrieving rows"
+    ) as rows:
         table_data = list(rows)
 
     # Query for census data for each row
     updates = []
-    with click.progressbar(table_data, label="Querying for census data") as rows:
+    with click.progressbar(
+        table_data, label="Querying for census data"
+    ) as rows:
         for row in rows:
-            if lat_field not in row["fields"]:
-                raise Exception(
-                    f"Table is missing requred lat field ({lat_field})"
-                )
-
-            if lng_field not in row["fields"]:
-                raise Exception(
-                    f"Table is missing requred lng field ({lng_field})"
-                )
-
-            if tract_field not in row["fields"]:
-                raise Exception(
-                    f"Table is missing requred tract field ({tract_field})"
-                )
-
-            if not row["fields"][tract_field]:
-                continue
-
-            lat = row["fields"][lat_field]
-            lng = row["fields"][lng_field]
+            lat = row["fields"].get(lat_field)
+            lng = row["fields"].get(lng_field)
 
             if not lat or not lng:
                 click.echo(
@@ -123,9 +124,18 @@ def fill_census(
                     "is missing a lat-lng value"
                 )
 
+            tract = tract_for_latlng(float(lat), float(lng))
+
+            if not tract:
+                continue
+
+            # Strip the leading zero off the geoid because that
+            # is the format used by HPI :(
+            geoid = str(int(tract["GEOID"]))
+
             updates.append({
                 "id": row["id"],
-                "fields": {tract_field: ""},
+                "fields": {tract_field: geoid},
             })
 
     # Verify if we should issue an update
@@ -134,7 +144,12 @@ def fill_census(
         return
 
     if not force:
-        click.confirm(f"Apply {len(updates)} updates?", abort=True)
+        example_value = updates[0]['fields'][tract_field]
+        click.confirm(
+            f"Apply {len(updates)} updates "
+            f"e.g. {tract_field}={example_value}?",
+            abort=True
+        )
 
     # Apply the update in bulk
     with click.progressbar(updates, label="Updating rows") as rows:

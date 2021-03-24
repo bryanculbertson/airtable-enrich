@@ -61,5 +61,6 @@ Helpers for adding data to airtable bases
       --base=<base-key> \
       --table=<table-name> \
       --lat=<column-lat> \
-      --lng=<column=lng>
+      --lng=<column-lng> \
+      --tract=<column-tract>
     ```
