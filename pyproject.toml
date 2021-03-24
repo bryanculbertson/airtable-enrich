@@ -19,7 +19,7 @@ click = "^7.1.2"
 lint = ["flake8", "black", "mypy"]
 
 [tool.poetry.scripts]
-airtable-enrich = 'airtable-enrich.cli:cli'
+airtable-enrich = "airtable-enrich.cli:cli"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
