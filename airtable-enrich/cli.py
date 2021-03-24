@@ -152,8 +152,7 @@ def fill_census(
         )
 
     # Apply the update in bulk
-    with click.progressbar(updates, label="Updating rows") as rows:
-        table.bulk_update(rows)
+    table.batch_update(updates)
 
 
 @cli.command()
