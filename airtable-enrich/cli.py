@@ -3,60 +3,44 @@
 """
 Entry point for running all data enrichment commands.
 """
-import logging
+import os
+
+import airtable
 import click
-
-LOGGING_LEVELS = {
-    0: logging.NOTSET,
-    1: logging.ERROR,
-    2: logging.WARN,
-    3: logging.INFO,
-    4: logging.DEBUG,
-}
+import dotenv
 
 
-class Info(object):
-    """An information object to pass data between CLI functions."""
-
-    def __init__(self):  # Note: This object must have an empty constructor.
-        """Create a new instance."""
-        self.verbose: int = 0
-
-
-# pass_info is a decorator for functions that pass 'Info' objects.
-#: pylint: disable=invalid-name
-pass_info = click.make_pass_decorator(Info, ensure=True)
-
-
-# Change the options to below to suit the actual options for your task (or
-# tasks).
 @click.group()
-@click.option("--verbose", "-v", count=True, help="Enable verbose output.")
-@pass_info
-def cli(info: Info, verbose: int):
+def cli():
     """Run airtable-enrich"""
-    # Use the verbosity count to determine the logging level...
-    if verbose > 0:
-        logging.basicConfig(
-            level=LOGGING_LEVELS[verbose]
-            if verbose in LOGGING_LEVELS
-            else logging.DEBUG
-        )
-        click.echo(
-            click.style(
-                f"Verbose logging is enabled. "
-                f"(LEVEL={logging.getLogger().getEffectiveLevel()})",
-                fg="yellow",
-            )
-        )
-    info.verbose = verbose
+    pass
 
 
 @cli.command()
-@pass_info
-def hello(_: Info):
-    """Say 'hello' to the nice people."""
-    click.echo("airtable-enrich says 'hello'")
+@click.option("--base", "basekey", type=str, prompt=True)
+@click.option("--table", "tablename", type=str, prompt=True)
+@click.option(
+    "--apikey", type=str, default=lambda: os.environ.get("AIRTABLE_APIKEY", "")
+)
+@click.option("--limit", type=int, default=5)
+def head(basekey: str, tablename: str, apikey: str, limit: int):
+    """Print the head of the table"""
+    table = airtable.Airtable(basekey, tablename, apikey)
+    for row in table.get_all(maxRecords=limit):
+        click.echo(row)
+
+
+@cli.command()
+@click.option("--base", "basekey", type=str, prompt=True)
+@click.option("--table", "tablename", type=str, prompt=True)
+@click.option(
+    "--apikey", type=str, default=lambda: os.environ.get("AIRTABLE_APIKEY", "")
+)
+def fields(basekey: str, tablename: str, apikey: str):
+    """Print the head of the table"""
+    table = airtable.Airtable(basekey, tablename, apikey)
+    for row in table.get_all(maxRecords=1):
+        click.echo(list(row['fields'].keys()))
 
 
 @cli.command()
@@ -65,5 +49,6 @@ def version():
     click.echo(click.style("0.1.0", bold=True))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    dotenv.load_dotenv()
     cli()
