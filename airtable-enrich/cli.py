@@ -123,6 +123,7 @@ def fill_census(
                     f"Skipping row {row['id']} because it "
                     "is missing a lat-lng value"
                 )
+                continue
 
             tract = tract_for_latlng(float(lat), float(lng))
 
