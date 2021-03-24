@@ -63,3 +63,7 @@ def hello(_: Info):
 def version():
     """Get the library version."""
     click.echo(click.style("0.1.0", bold=True))
+
+
+if __name__ == '__main__':
+    cli()
