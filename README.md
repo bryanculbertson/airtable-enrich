@@ -12,18 +12,18 @@ Helpers for adding data to airtable bases
     curl https://pyenv.run | bash
     ```
 
-1. Install project python version:
-
-    ```sh
-    pyenv install
-    ```
-
 1. Add to `.bashrc`:
 
     ```sh
     export PATH="/home/codespace/.pyenv/bin:$PATH"
     eval "$(pyenv init -)"
     eval "$(pyenv virtualenv-init -)"
+    ```
+
+1. Install project python version:
+
+    ```sh
+    pyenv install
     ```
 
 1. Install `poetry`:
