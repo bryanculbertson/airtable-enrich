@@ -6,6 +6,12 @@ Helpers for adding data to airtable bases
 
 ### Setup Environment Once
 
+1. Install required system deps (Debian):
+
+    ```sh
+    sudo apt-get install libbz2-dev liblzma-dev
+    ```
+
 1. Install `pyenv`:
 
     ```sh

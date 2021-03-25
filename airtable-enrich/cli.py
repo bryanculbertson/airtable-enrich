@@ -3,13 +3,21 @@
 """
 Entry point for running all data enrichment commands.
 """
+import functools
 import os
+import pathlib
 from typing import Optional
 
 import airtable
 import click
 import dotenv
+import geopandas as gpd
 import requests
+import shapely.geometry
+
+
+DATA_DIR = pathlib.Path(__file__).parent / "data"
+TRACT_SHP = DATA_DIR / "cb_2019_06_tract_500k.zip"
 
 
 CENSUS_GEOCODER_URL = "https://geocoding.geo.census.gov/geocoder/geographies/coordinates"
@@ -17,7 +25,7 @@ DEFAULT_BENCHMARK = "Public_AR_Current"
 DEFAULT_VINTAGE = "Current_Current"
 
 
-def tract_for_latlng(lat: float, lng: float) -> Optional[dict]:
+def tract_from_census_geocoder(lat: float, lng: float) -> Optional[str]:
     params = {
         "x": lng,
         "y": lat,
@@ -43,7 +51,27 @@ def tract_for_latlng(lat: float, lng: float) -> Optional[dict]:
         if tract.get("status"):
             return None
 
-        return tract
+        return tract["GEOID"]
+
+
+# Cache of loaded tracts geodataframe
+@functools.cache
+def load_tracts() -> gpd.GeoDataFrame:
+    return gpd.read_file(TRACT_SHP)
+
+
+def tract_from_census_shapefile(lat: float, lng: float) -> Optional[str]:
+    tracts_gpd = load_tracts()
+
+    lng_lat = shapely.geometry.Point(lng, lat)
+
+    matches = tracts_gpd.sindex.query(lng_lat, 'within')
+
+    if matches.size == 0:
+        return None
+
+    return tracts_gpd["GEOID"].iloc[matches[0]]
+
 
 @click.group()
 def cli():
@@ -88,7 +116,9 @@ def fields(basekey: str, tablename: str, apikey: str):
 @click.option("--lng", "lng_field", type=str, required=True)
 @click.option("--tract", "tract_field", type=str, required=True)
 @click.option("--limit", type=int)
-@click.option("--force", type=bool, default=False)
+@click.option("--confirm/--no-confirm",  "confirm", type=bool, default=True)
+@click.option("--override/--no-override",  "override", type=bool, default=False)
+@click.option("--engine", type=str, default="shapefile")
 def fill_census(
     basekey: str,
     tablename: str,
@@ -97,7 +127,9 @@ def fill_census(
     lng_field: str,
     tract_field: str,
     limit: Optional[int],
-    force: bool,
+    confirm: bool,
+    override: bool,
+    engine: str,
 ):
     """Print the head of the table"""
     table = airtable.Airtable(basekey, tablename, apikey)
@@ -115,28 +147,49 @@ def fill_census(
         table_data, label="Querying for census data"
     ) as rows:
         for row in rows:
-            lat = row["fields"].get(lat_field)
-            lng = row["fields"].get(lng_field)
+            lat_str = row["fields"].get(lat_field)
+            lng_str = row["fields"].get(lng_field)
 
-            if not lat or not lng:
+            if not lat_str or not lng_str:
                 click.echo(
-                    f"Skipping row {row['id']} because it "
+                    f"Skip row {row['id']} because it "
                     "is missing a lat-lng value"
                 )
                 continue
 
-            tract = tract_for_latlng(float(lat), float(lng))
+            lat = float(lat_str)
+            lng = float(lng_str)
+
+            if engine == "geocoder":
+                tract = tract_from_census_geocoder(lat, lng)
+            elif engine == "shapefile":
+                tract = tract_from_census_shapefile(lat, lng)
+            else:
+                raise Exception(f"Invalid engine specified {engine}")
 
             if not tract:
                 click.echo(
-                    f"Skipping row {row['id']} because "
+                    f"Skip row {row['id']} because "
                     f"geocoder didn't return a tract for ({lat}, {lng})"
                 )
                 continue
 
             # Strip the leading zero off the geoid because that
             # is the format used by HPI :(
-            geoid = str(int(tract["GEOID"]))
+            geoid = str(int(tract))
+
+            existing_geoid = row["fields"].get(tract_field)
+            if existing_geoid == geoid:
+                # Skip updating value because it is the same
+                continue
+
+            elif existing_geoid and not override:
+                click.echo(
+                    f"Skip row {row['id']} because "
+                    f"existing value ({existing_geoid}) is different "
+                    f"than new value ({geoid})"
+                )
+                continue
 
             updates.append({
                 "id": row["id"],
@@ -150,7 +203,7 @@ def fill_census(
 
     example_value = updates[0]['fields'][tract_field]
 
-    if not force:
+    if confirm:
         click.confirm(
             f"Apply {len(updates)} updates "
             f"e.g. {tract_field}={example_value}?",

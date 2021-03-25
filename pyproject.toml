@@ -14,6 +14,9 @@ mypy = { version = "^0.812", optional = true }
 click = "^7.1.2"
 python-dotenv = "^0.15.0"
 requests = "^2.25.1"
+geopandas = "^0.9.0"
+Rtree = "^0.9.7"
+Shapely = "^1.7.1"
 
 [tool.poetry.dev-dependencies]
 
